@@ -2,17 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!
+  apiKey: process.env.ANTHROPIC_API_KEY!,
 })
 
 const SYSTEM = `You are NOVA, an AI clinical assistant embedded in EvolMentra, an ABA therapy platform.
 You write professional, BACB-compliant clinical documentation.
-Be specific, concise, and clinical. Use plain text sections — no markdown headers.
+Be specific, concise, and clinical. Use plain text section labels like SUBJECTIVE: — no markdown.
 Always write in third person using the patient's name.`
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-
   let prompt = ''
 
   if (body.type === 'soap') {
@@ -27,9 +26,9 @@ Date: ${new Date().toLocaleDateString()}
 What the therapist observed:
 ${body.observations}
 
-Write the four sections: SUBJECTIVE, OBJECTIVE, ASSESSMENT, PLAN.
-Include CPT code justification in the note. End with a brief plan for next session.
-Be specific with data — include percentages, trial counts, and behaviors observed.`
+Write four sections labeled SUBJECTIVE, OBJECTIVE, ASSESSMENT, PLAN.
+Include CPT code justification. End with a specific plan for next session.
+Use data — percentages, trial counts, specific behaviors.`
   }
 
   if (body.type === 'goal') {
@@ -38,40 +37,37 @@ Be specific with data — include percentages, trial counts, and behaviors obser
 What the therapist wants to target:
 ${body.description}
 
-Write ONE well-formed SMART goal with:
-- Specific observable behavior
-- Measurable criterion (% accuracy, number of sessions)  
-- Time-bound specification
-- BACB-compliant language in third person
+Write ONE well-formed SMART goal. Then add:
+RATIONALE: (one sentence)
+TEACHING PROCEDURE: (two sentences)
+MASTERY CRITERION: (specific data criterion)
 
-Then add:
-RATIONALE: (one sentence clinical rationale)
-TEACHING PROCEDURE: (2 sentences on how to teach it)
-MASTERY CRITERION: (specific data criterion)`
+Use third person. BACB-compliant language.`
   }
 
   if (body.type === 'session_plan') {
     prompt = `Create a detailed ABA therapy session plan.
 
 Patient: ${body.patient}
-Session length: ${body.duration}
-Focus: ${body.focus || 'General ABA programming'}
+Duration: ${body.duration}
+Focus areas: ${body.focus || 'General ABA programming'}
 
 Create a minute-by-minute plan with time blocks, activity names, and specific therapist instructions.
-Make it immediately usable. Include warm-up, 2-3 structured activities, movement break, and wrap-up.`
+Include warm-up, 2-3 structured activities, movement break, wrap-up.`
   }
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-5-20251001',
       max_tokens: 1000,
       system: SYSTEM,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: prompt }],
     })
 
     const text = message.content[0].type === 'text' ? message.content[0].text : ''
     return NextResponse.json({ text })
   } catch (err: any) {
+    console.error('NOVA API error:', err.message)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
