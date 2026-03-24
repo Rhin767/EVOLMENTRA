@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -14,10 +14,7 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { setError(error.message); setLoading(false) }
     else router.push('/dashboard')
@@ -44,7 +41,7 @@ export default function LoginPage() {
             </div>
             <div>
               <label className="label">Password</label>
-              <input type="password" className="input" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+              <input type="password" className="input" placeholder="password" value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
             <button type="submit" disabled={loading} className="btn btn-primary w-full justify-center py-3 text-base mt-2">
               {loading ? 'Signing in...' : 'Sign In →'}
@@ -54,7 +51,6 @@ export default function LoginPage() {
             <p className="text-sm text-gray-500">New clinic? <a href="/auth/signup" className="text-teal-500 font-semibold hover:underline">Set up your account</a></p>
           </div>
         </div>
-        <p className="text-center text-white/25 text-xs mt-6">🔒 256-bit encrypted · HIPAA compliant</p>
       </div>
     </div>
   )
